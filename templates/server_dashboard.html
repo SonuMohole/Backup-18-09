@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="refresh" content="5" />
+  
     <title>Server Dashboard</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
@@ -128,5 +128,50 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // This function will run every 5 seconds to get new data
+    const smoothRefresh = async () => {
+        // Fetch the latest info from the special Python function
+        const response = await fetch('/server_dashboard/data');
+        const data = await response.json();
+
+        // Update the cards with the new numbers
+        document.querySelector('.card-text.fs-2').textContent = data.total_downloads;
+        document.querySelectorAll('.card-text.fs-2')[1].textContent = data.unique_ips;
+        document.querySelector('.card.text-bg-info .card-text').textContent = data.latest_download_time;
+
+        // Update the table
+        const tableBody = document.querySelector('tbody');
+        tableBody.innerHTML = ''; // Clear out the old rows
+
+        if (data.logs.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No agents have reported in yet.</td></tr>`;
+        } else {
+            data.logs.forEach(log => {
+                const osName = (log.os_name || '').toLowerCase();
+                let osBadge = 'bg-secondary';
+                if (osName.includes('windows')) osBadge = 'os-badge-windows';
+                else if (osName.includes('ubuntu')) osBadge = 'os-badge-linux';
+                else if (osName.includes('mac')) osBadge = 'os-badge-mac';
+
+                const statusBadge = log.status === 'Active' ? 'bg-success' : 'bg-danger';
+
+                const row = `
+                    <tr>
+                        <td>${log.last_heartbeat_str}</td>
+                        <td>${log.ip_address}</td>
+                        <td>${log.hostname}</td>
+                        <td><span class="badge ${osBadge}">${log.os_name}</span></td>
+                        <td>${log.machine_type}</td>
+                        <td><span class="badge ${statusBadge}">${log.status}</span></td>
+                    </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+    };
+
+    // Tell the browser to run our smoothRefresh function every 5 seconds
+    setInterval(smoothRefresh, 5000);
+</script>
   </body>
 </html>
